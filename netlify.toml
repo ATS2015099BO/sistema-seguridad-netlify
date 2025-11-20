@@ -4,6 +4,7 @@
 
 [build.environment]
   NODE_VERSION = "18"
+  MONGODB_URI = "mongodb+srv://sergioaapazati:SergioAapaza25121998@cluster0.qiqttvg.mongodb.net/?appName=Cluster0"
 
 [[redirects]]
   from = "/*"

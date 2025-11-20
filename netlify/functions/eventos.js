@@ -1,6 +1,7 @@
 const { MongoClient } = require('mongodb');
 
-const client = new MongoClient(process.env.MONGODB_URI);
+const MONGODB_URI = "mongodb+srv://sergioaapazati:SergioAapaza25121998@cluster0.qiqttvg.mongodb.net/?appName=Cluster0";
+const client = new MongoClient(MONGODB_URI);
 
 exports.handler = async (event, context) => {
   const headers = {
