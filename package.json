@@ -1,7 +1,6 @@
 {
   "name": "sistema-seguridad-netlify",
   "version": "1.0.0",
-  "type": "module",
   "scripts": {
     "build": "react-scripts build",
     "dev": "react-scripts start",

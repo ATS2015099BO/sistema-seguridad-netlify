@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
-import Dashboard from './components/Dashboard';
-import Eventos from './components/Eventos';
-import Estadisticas from './components/Estadisticas';
+import Dashboard from './components/Dashboard.js';
+import Eventos from './components/Eventos.js';
+import Estadisticas from './components/Estadisticas.js';
 import './App.css';
 
 function App() {
