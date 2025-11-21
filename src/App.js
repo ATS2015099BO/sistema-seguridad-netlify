@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import Dashboard from './components/Dashboard.js';
 import Eventos from './components/Eventos.js';
-import Estadisticas from './components/Estadisticas.js';
+import Usuarios from './components/Usuarios.js';
 import './App.css';
 
 function App() {
@@ -13,9 +13,9 @@ function App() {
         <div className="header-content">
           <h1>
             <i className="fas fa-shield-alt"></i>
-            Sistema de Seguridad
+            Sistema de Seguridad - Admin Panel
           </h1>
-          <p className="subtitle">Monitor en tiempo real - RFID + Reconocimiento Facial</p>
+          <p className="subtitle">Gestión de accesos RFID + Reconocimiento Facial</p>
         </div>
         
         <nav className="app-nav">
@@ -34,11 +34,11 @@ function App() {
             Eventos
           </button>
           <button 
-            className={vistaActiva === 'estadisticas' ? 'active' : ''}
-            onClick={() => setVistaActiva('estadisticas')}
+            className={vistaActiva === 'usuarios' ? 'active' : ''}
+            onClick={() => setVistaActiva('usuarios')}
           >
-            <i className="fas fa-chart-bar"></i>
-            Estadísticas
+            <i className="fas fa-users"></i>
+            Usuarios
           </button>
         </nav>
       </header>
@@ -46,17 +46,8 @@ function App() {
       <main className="app-main">
         {vistaActiva === 'dashboard' && <Dashboard />}
         {vistaActiva === 'eventos' && <Eventos />}
-        {vistaActiva === 'estadisticas' && <Estadisticas />}
+        {vistaActiva === 'usuarios' && <Usuarios />}
       </main>
-
-      <footer className="app-footer">
-        <p>
-          <i className="fas fa-database"></i>
-          Conectado a MongoDB Atlas • 
-          <i className="fas fa-bolt"></i>
-          Actualización en tiempo real
-        </p>
-      </footer>
     </div>
   );
 }
