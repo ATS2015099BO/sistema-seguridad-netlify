@@ -1,0 +1,253 @@
+const { MongoClient, ObjectId } = require('mongodb');
+
+const MONGODB_URI = "mongodb+srv://sergioaapazati:SergioAapaza25121998@cluster0.qiqttvg.mongodb.net/?appName=Cluster0";
+const client = new MongoClient(MONGODB_URI);
+
+exports.handler = async (event, context) => {
+  const headers = {
+    'Access-Control-Allow-Origin': '*',
+    'Access-Control-Allow-Headers': 'Content-Type',
+    'Access-Control-Allow-Methods': 'GET, PUT, DELETE, OPTIONS'
+  };
+
+  if (event.httpMethod === 'OPTIONS') {
+    return { statusCode: 200, headers, body: '' };
+  }
+
+  try {
+    await client.connect();
+    const db = client.db('sistema_seguridad');
+    
+    console.log('🔍 INICIANDO BÚSQUEDA DE USUARIOS...');
+    
+    // DEBUG: Listar todas las colecciones
+    const collections = await db.listCollections().toArray();
+    const collectionNames = collections.map(c => c.name);
+    console.log('📂 Colecciones disponibles:', collectionNames);
+
+    // GET - Obtener todos los usuarios
+    if (event.httpMethod === 'GET') {
+      let usuarios = [];
+      let coleccionUsada = '';
+      
+      // Intentar diferentes nombres de colección
+      const posiblesColecciones = ['usuarios', 'users', 'Usuarios', 'user'];
+      
+      for (const coleccionNombre of posiblesColecciones) {
+        try {
+          const collection = db.collection(coleccionNombre);
+          const count = await collection.countDocuments();
+          console.log(`🔎 Revisando colección "${coleccionNombre}": ${count} documentos`);
+          
+          if (count > 0) {
+            usuarios = await collection.find({}).toArray();
+            coleccionUsada = coleccionNombre;
+            console.log(`✅ Usuarios encontrados en "${coleccionNombre}":`, JSON.stringify(usuarios, null, 2));
+            break;
+          }
+        } catch (e) {
+          console.log(`❌ Colección "${coleccionNombre}" no existe o error:`, e.message);
+        }
+      }
+      
+      // Si no encontramos usuarios en colecciones específicas, buscar en eventos
+      if (usuarios.length === 0) {
+        console.log('🔄 Buscando usuarios en eventos...');
+        try {
+          const eventosCollection = db.collection('eventos_acceso');
+          const eventosCount = await eventosCollection.countDocuments();
+          console.log(`📊 Eventos en la base de datos: ${eventosCount}`);
+          
+          if (eventosCount > 0) {
+            const eventos = await eventosCollection.find({}).limit(50).toArray();
+            
+            // Extraer usuarios únicos de los eventos
+            const usuariosUnicos = [...new Set(eventos.map(e => e.usuario).filter(u => u && u.trim() !== ''))];
+            console.log(`👤 Usuarios únicos encontrados en eventos:`, usuariosUnicos);
+            
+            usuarios = usuariosUnicos.map(usuario => ({
+              usuario: usuario,
+              nombre_completo: usuario,
+              carnet_identidad: 'No registrado',
+              rfid_code: 'No asignado',
+              fecha_registro: new Date(),
+              activo: true,
+              _id: usuario // ID temporal basado en el nombre
+            }));
+            
+            coleccionUsada = 'eventos_acceso (usuarios derivados)';
+          }
+        } catch (e) {
+          console.log('❌ Error buscando en eventos:', e.message);
+        }
+      }
+      
+      // Mapear campos a estructura esperada por el frontend
+      const usuariosMapeados = usuarios.map(user => {
+        // Debug de la estructura original
+        console.log(`📝 Procesando usuario:`, user);
+        
+        return {
+          _id: user._id || user.id || user.usuario || `temp_${Date.now()}_${Math.random()}`,
+          usuario: user.usuario || user.username || user.user || 'Usuario Desconocido',
+          nombre_completo: user.nombre_completo || user.nombre || user.fullname || user.usuario || 'Nombre No Registrado',
+          carnet_identidad: user.carnet_identidad || user.carnet || user.ci || 'No registrado',
+          rfid_code: user.rfid_code || user.rfid || user.rfid_code || 'No asignado',
+          fecha_registro: user.fecha_registro || user.createdAt || user.fecha_registro || new Date(),
+          activo: user.activo !== undefined ? user.activo : true
+        };
+      });
+      
+      console.log(`🎯 RESULTADO FINAL: ${usuariosMapeados.length} usuarios mapeados`);
+      console.log('📊 Usuarios mapeados:', JSON.stringify(usuariosMapeados, null, 2));
+
+      return {
+        statusCode: 200,
+        headers,
+        body: JSON.stringify({
+          success: true,
+          data: usuariosMapeados,
+          debug: {
+            coleccionUsada: coleccionUsada,
+            totalUsuariosEncontrados: usuarios.length,
+            totalUsuariosMapeados: usuariosMapeados.length,
+            coleccionesDisponibles: collectionNames,
+            timestamp: new Date().toISOString()
+          }
+        })
+      };
+    }
+
+    // PUT - Actualizar solo nombre y carnet (solo si encontramos usuarios)
+    if (event.httpMethod === 'PUT') {
+      const data = JSON.parse(event.body);
+      console.log('✏️ Solicitando actualización de usuario:', data);
+      
+      // Buscar en qué colección están los usuarios
+      let coleccionEncontrada = null;
+      const posiblesColecciones = ['usuarios', 'users', 'Usuarios'];
+      
+      for (const coleccionNombre of posiblesColecciones) {
+        try {
+          const collection = db.collection(coleccionNombre);
+          const count = await collection.countDocuments();
+          if (count > 0) {
+            coleccionEncontrada = collection;
+            console.log(`✅ Usando colección "${coleccionNombre}" para actualizar`);
+            break;
+          }
+        } catch (e) {
+          console.log(`❌ Colección "${coleccionNombre}" no disponible`);
+        }
+      }
+      
+      if (!coleccionEncontrada) {
+        return {
+          statusCode: 404,
+          headers,
+          body: JSON.stringify({
+            success: false,
+            error: 'No se encontró la colección de usuarios'
+          })
+        };
+      }
+
+      const resultado = await coleccionEncontrada.updateOne(
+        { _id: new ObjectId(data.id) },
+        { 
+          $set: { 
+            nombre_completo: data.nombre,
+            carnet_identidad: data.carnet,
+            ultima_actualizacion: new Date()
+          } 
+        }
+      );
+
+      console.log('✅ Resultado de actualización:', resultado);
+
+      return {
+        statusCode: 200,
+        headers,
+        body: JSON.stringify({
+          success: true,
+          message: 'Usuario actualizado correctamente',
+          resultado: resultado
+        })
+      };
+    }
+
+    // DELETE - Eliminar usuario y todos sus datos
+    if (event.httpMethod === 'DELETE') {
+      const data = JSON.parse(event.body);
+      console.log('🗑️ Solicitando eliminación de usuario:', data);
+      
+      let eliminaciones = [];
+      
+      // Buscar y eliminar de todas las colecciones posibles
+      const posiblesColeccionesUsuarios = ['usuarios', 'users', 'Usuarios'];
+      
+      for (const coleccionNombre of posiblesColeccionesUsuarios) {
+        try {
+          const collection = db.collection(coleccionNombre);
+          const resultado = await collection.deleteOne({ _id: new ObjectId(data.id) });
+          if (resultado.deletedCount > 0) {
+            eliminaciones.push(`Usuario eliminado de ${coleccionNombre}`);
+          }
+        } catch (e) {
+          console.log(`No se pudo eliminar de ${coleccionNombre}:`, e.message);
+        }
+      }
+      
+      // Eliminar eventos relacionados
+      try {
+        const eventosCollection = db.collection('eventos_acceso');
+        const resultadoEventos = await eventosCollection.deleteMany({ usuario: data.usuario });
+        eliminaciones.push(`Eventos eliminados: ${resultadoEventos.deletedCount}`);
+      } catch (e) {
+        console.log('Error eliminando eventos:', e.message);
+      }
+
+      // Eliminar encoding facial si existe
+      try {
+        const encodingsCollection = db.collection('encodings_faciales');
+        const resultadoEncodings = await encodingsCollection.deleteOne({ usuario: data.usuario });
+        eliminaciones.push(`Encoding facial eliminado: ${resultadoEncodings.deletedCount}`);
+      } catch (e) {
+        console.log('Error eliminando encoding facial:', e.message);
+      }
+
+      console.log('✅ Eliminaciones completadas:', eliminaciones);
+
+      return {
+        statusCode: 200,
+        headers,
+        body: JSON.stringify({
+          success: true,
+          message: 'Usuario y datos relacionados eliminados',
+          eliminaciones: eliminaciones
+        })
+      };
+    }
+
+    return {
+      statusCode: 405,
+      headers,
+      body: JSON.stringify({ 
+        success: false,
+        error: 'Método no permitido' 
+      })
+    };
+
+  } catch (error) {
+    console.error('💥 ERROR COMPLETO:', error);
+    return {
+      statusCode: 500,
+      headers,
+      body: JSON.stringify({ 
+        success: false,
+        error: error.message,
+        stack: error.stack
+      })
+    };
+  }
+};

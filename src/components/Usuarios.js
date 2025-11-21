@@ -7,9 +7,7 @@ const Usuarios = () => {
   const [editingUser, setEditingUser] = useState(null);
   const [formData, setFormData] = useState({
     nombre: '',
-    carnet: '',
-    usuario: '',
-    rfid_code: ''
+    carnet: ''
   });
 
   useEffect(() => {
@@ -18,7 +16,6 @@ const Usuarios = () => {
 
   const cargarUsuarios = async () => {
     try {
-      // Esta función la crearemos después en Netlify Functions
       const response = await fetch('/.netlify/functions/usuarios');
       const data = await response.json();
       
@@ -35,13 +32,15 @@ const Usuarios = () => {
   const handleSubmit = async (e) => {
     e.preventDefault();
     try {
-      const url = '/.netlify/functions/usuarios';
-      const method = editingUser ? 'PUT' : 'POST';
-      
-      const response = await fetch(url, {
-        method: method,
+      const response = await fetch('/.netlify/functions/usuarios', {
+        method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(editingUser ? { ...formData, id: editingUser._id } : formData)
+        body: JSON.stringify({ 
+          id: editingUser._id,
+          nombre: formData.nombre,
+          carnet: formData.carnet,
+          usuario: editingUser.usuario // Mantener el mismo usuario
+        })
       });
 
       const result = await response.json();
@@ -49,11 +48,11 @@ const Usuarios = () => {
       if (result.success) {
         setShowModal(false);
         setEditingUser(null);
-        setFormData({ nombre: '', carnet: '', usuario: '', rfid_code: '' });
-        cargarUsuarios();
+        setFormData({ nombre: '', carnet: '' });
+        cargarUsuarios(); // Recargar la lista
       }
     } catch (error) {
-      console.error('Error guardando usuario:', error);
+      console.error('Error actualizando usuario:', error);
     }
   };
 
@@ -61,20 +60,21 @@ const Usuarios = () => {
     setEditingUser(usuario);
     setFormData({
       nombre: usuario.nombre_completo || '',
-      carnet: usuario.carnet_identidad || '',
-      usuario: usuario.usuario || '',
-      rfid_code: usuario.rfid_code || ''
+      carnet: usuario.carnet_identidad || ''
     });
     setShowModal(true);
   };
 
-  const handleDelete = async (usuarioId) => {
-    if (window.confirm('¿Estás seguro de eliminar este usuario? Se borrarán TODOS sus datos incluyendo rostro y eventos.')) {
+  const handleDelete = async (usuario) => {
+    if (window.confirm(`¿Estás seguro de eliminar al usuario ${usuario.usuario}? Se borrarán TODOS sus datos incluyendo rostro, RFID y eventos.`)) {
       try {
         const response = await fetch('/.netlify/functions/usuarios', {
           method: 'DELETE',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ id: usuarioId })
+          body: JSON.stringify({ 
+            id: usuario._id,
+            usuario: usuario.usuario 
+          })
         });
 
         const result = await response.json();
@@ -84,18 +84,6 @@ const Usuarios = () => {
       } catch (error) {
         console.error('Error eliminando usuario:', error);
       }
-    }
-  };
-
-  const generarUsuario = () => {
-    const nombre = formData.nombre || '';
-    const carnet = formData.carnet || '';
-    
-    const iniciales = nombre.split(' ').slice(0, 3).map(p => p[0] || '').join('').toUpperCase();
-    const digitos = carnet.replace(/\D/g, '').slice(-3);
-    
-    if (iniciales && digitos) {
-      setFormData(prev => ({ ...prev, usuario: iniciales + digitos }));
     }
   };
 
@@ -113,19 +101,14 @@ const Usuarios = () => {
       <div className="page-header">
         <h1>
           <i className="fas fa-users"></i>
-          Gestión de Usuarios
+          Gestión de Usuarios Registrados
         </h1>
-        <button 
-          className="btn-primary"
-          onClick={() => {
-            setEditingUser(null);
-            setFormData({ nombre: '', carnet: '', usuario: '', rfid_code: '' });
-            setShowModal(true);
-          }}
-        >
-          <i className="fas fa-plus"></i>
-          Nuevo Usuario
-        </button>
+        <div className="header-info">
+          <span className="info-badge">
+            <i className="fas fa-info-circle"></i>
+            Los usuarios se registran desde el sistema físico
+          </span>
+        </div>
       </div>
 
       <div className="table-container">
@@ -150,7 +133,7 @@ const Usuarios = () => {
                 <td>{usuario.nombre_completo}</td>
                 <td>{usuario.carnet_identidad}</td>
                 <td>
-                  <code className="rfid-code">{usuario.rfid_code}</code>
+                  <code className="rfid-code">{usuario.rfid_code || 'No asignado'}</code>
                 </td>
                 <td>
                   {new Date(usuario.fecha_registro).toLocaleDateString()}
@@ -168,13 +151,15 @@ const Usuarios = () => {
                       title="Editar nombre y carnet"
                     >
                       <i className="fas fa-edit"></i>
+                      Editar
                     </button>
                     <button 
                       className="btn-delete"
-                      onClick={() => handleDelete(usuario._id)}
+                      onClick={() => handleDelete(usuario)}
                       title="Eliminar usuario completamente"
                     >
                       <i className="fas fa-trash"></i>
+                      Eliminar
                     </button>
                   </div>
                 </td>
@@ -186,18 +171,18 @@ const Usuarios = () => {
         {usuarios.length === 0 && (
           <div className="empty-state">
             <i className="fas fa-users-slash"></i>
-            <h3>No hay usuarios registrados</h3>
-            <p>Comienza agregando el primer usuario al sistema.</p>
+            <h3>No hay usuarios registrados en el sistema</h3>
+            <p>Los usuarios aparecerán aquí después de registrarse en el sistema físico.</p>
           </div>
         )}
       </div>
 
-      {/* Modal para agregar/editar usuario */}
+      {/* Modal para editar usuario */}
       {showModal && (
         <div className="modal-overlay">
           <div className="modal">
             <div className="modal-header">
-              <h2>{editingUser ? 'Editar Usuario' : 'Nuevo Usuario'}</h2>
+              <h2>Editar Usuario: {editingUser?.usuario}</h2>
               <button 
                 className="close-btn"
                 onClick={() => setShowModal(false)}
@@ -208,14 +193,22 @@ const Usuarios = () => {
             
             <form onSubmit={handleSubmit} className="modal-form">
               <div className="form-group">
-                <label>Nombre Completo (3 palabras mínimo)</label>
+                <label>Usuario (No editable)</label>
+                <input
+                  type="text"
+                  value={editingUser?.usuario || ''}
+                  readOnly
+                  className="readonly-input"
+                />
+                <small>El usuario no se puede modificar</small>
+              </div>
+              
+              <div className="form-group">
+                <label>Nombre Completo</label>
                 <input
                   type="text"
                   value={formData.nombre}
-                  onChange={(e) => {
-                    setFormData(prev => ({ ...prev, nombre: e.target.value }));
-                    if (!editingUser) generarUsuario();
-                  }}
+                  onChange={(e) => setFormData(prev => ({ ...prev, nombre: e.target.value }))}
                   required
                   placeholder="Ej: Juan Carlos Perez Lopez"
                 />
@@ -226,38 +219,22 @@ const Usuarios = () => {
                 <input
                   type="text"
                   value={formData.carnet}
-                  onChange={(e) => {
-                    setFormData(prev => ({ ...prev, carnet: e.target.value }));
-                    if (!editingUser) generarUsuario();
-                  }}
+                  onChange={(e) => setFormData(prev => ({ ...prev, carnet: e.target.value }))}
                   required
                   placeholder="Ej: 1234567LP"
                 />
               </div>
-              
+
               <div className="form-group">
-                <label>Usuario (Generado automáticamente)</label>
+                <label>RFID (No editable)</label>
                 <input
                   type="text"
-                  value={formData.usuario}
+                  value={editingUser?.rfid_code || 'No asignado'}
                   readOnly
                   className="readonly-input"
                 />
-                <small>Se genera automáticamente con iniciales y últimos dígitos del carnet</small>
+                <small>El RFID se asigna al registrar la tarjeta física</small>
               </div>
-              
-              {!editingUser && (
-                <div className="form-group">
-                  <label>Código RFID</label>
-                  <input
-                    type="text"
-                    value={formData.rfid_code}
-                    onChange={(e) => setFormData(prev => ({ ...prev, rfid_code: e.target.value }))}
-                    placeholder="Se asignará al registrar tarjeta"
-                  />
-                  <small>Este campo se completará automáticamente al registrar la tarjeta física</small>
-                </div>
-              )}
 
               <div className="modal-actions">
                 <button 
@@ -271,7 +248,8 @@ const Usuarios = () => {
                   type="submit"
                   className="btn-primary"
                 >
-                  {editingUser ? 'Actualizar' : 'Crear'} Usuario
+                  <i className="fas fa-save"></i>
+                  Guardar Cambios
                 </button>
               </div>
             </form>
