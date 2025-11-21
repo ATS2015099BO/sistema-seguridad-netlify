@@ -120,60 +120,90 @@ exports.handler = async (event, context) => {
 
     // PUT - Actualizar solo nombre y carnet (solo si encontramos usuarios)
     if (event.httpMethod === 'PUT') {
-      const data = JSON.parse(event.body);
-      console.log('✏️ Solicitando actualización de usuario:', data);
-      
-      // Buscar en qué colección están los usuarios
-      let coleccionEncontrada = null;
-      const posiblesColecciones = ['usuarios', 'users', 'Usuarios'];
-      
-      for (const coleccionNombre of posiblesColecciones) {
+    const data = JSON.parse(event.body);
+    console.log('✏️ Solicitando actualización de usuario:', data);
+    
+    // Buscar en qué colección están los usuarios
+    let coleccionEncontrada = null;
+    const posiblesColecciones = ['usuarios', 'users', 'Usuarios'];
+    
+    for (const coleccionNombre of posiblesColecciones) {
         try {
-          const collection = db.collection(coleccionNombre);
-          const count = await collection.countDocuments();
-          if (count > 0) {
+        const collection = db.collection(coleccionNombre);
+        const count = await collection.countDocuments();
+        if (count > 0) {
             coleccionEncontrada = collection;
             console.log(`✅ Usando colección "${coleccionNombre}" para actualizar`);
             break;
-          }
-        } catch (e) {
-          console.log(`❌ Colección "${coleccionNombre}" no disponible`);
         }
-      }
-      
-      if (!coleccionEncontrada) {
+        } catch (e) {
+        console.log(`❌ Colección "${coleccionNombre}" no disponible`);
+        }
+    }
+    
+    if (!coleccionEncontrada) {
         return {
-          statusCode: 404,
-          headers,
-          body: JSON.stringify({
+        statusCode: 404,
+        headers,
+        body: JSON.stringify({
             success: false,
             error: 'No se encontró la colección de usuarios'
-          })
+        })
         };
-      }
+    }
 
-      const resultado = await coleccionEncontrada.updateOne(
+    // 1. Actualizar el usuario en la colección principal
+    const resultado = await coleccionEncontrada.updateOne(
         { _id: new ObjectId(data.id) },
         { 
-          $set: { 
+        $set: { 
             nombre_completo: data.nombre,
             carnet_identidad: data.carnet,
+            usuario: data.usuario, // ¡NUEVO: Actualizar el usuario también!
             ultima_actualizacion: new Date()
-          } 
+        } 
         }
-      );
+    );
 
-      console.log('✅ Resultado de actualización:', resultado);
+    console.log('✅ Resultado de actualización en usuarios:', resultado);
 
-      return {
+    // 2. Actualizar el usuario en eventos (si cambió)
+    if (data.usuario_original && data.usuario_original !== data.usuario) {
+        try {
+        const eventosCollection = db.collection('eventos_acceso');
+        const resultadoEventos = await eventosCollection.updateMany(
+            { usuario: data.usuario_original },
+            { $set: { usuario: data.usuario } }
+        );
+        console.log(`✅ Eventos actualizados: ${resultadoEventos.modifiedCount}`);
+        } catch (e) {
+        console.log('❌ Error actualizando eventos:', e.message);
+        }
+    }
+
+    // 3. Actualizar el usuario en encodings faciales (si cambió)
+    if (data.usuario_original && data.usuario_original !== data.usuario) {
+        try {
+        const encodingsCollection = db.collection('encodings_faciales');
+        const resultadoEncodings = await encodingsCollection.updateOne(
+            { usuario: data.usuario_original },
+            { $set: { usuario: data.usuario } }
+        );
+        console.log(`✅ Encoding facial actualizado: ${resultadoEncodings.modifiedCount}`);
+        } catch (e) {
+        console.log('❌ Error actualizando encoding facial:', e.message);
+        }
+    }
+
+    return {
         statusCode: 200,
         headers,
         body: JSON.stringify({
-          success: true,
-          message: 'Usuario actualizado correctamente',
-          resultado: resultado
+        success: true,
+        message: 'Usuario actualizado correctamente en todas las colecciones',
+        resultado: resultado
         })
-      };
+    };
     }
 
     // DELETE - Eliminar usuario y todos sus datos

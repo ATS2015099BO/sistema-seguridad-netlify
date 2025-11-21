@@ -709,3 +709,11 @@
 .btn-delete:hover {
   background: #f1b0b7;
 }
+
+/* Estilo especial para el usuario generado */
+.generated-user {
+  background: #e8f5e8 !important;
+  color: #2e7d32 !important;
+  font-weight: 600;
+  border: 1px solid #c8e6c9 !important;
+}

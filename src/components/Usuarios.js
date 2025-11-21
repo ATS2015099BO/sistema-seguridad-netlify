@@ -7,7 +7,8 @@ const Usuarios = () => {
   const [editingUser, setEditingUser] = useState(null);
   const [formData, setFormData] = useState({
     nombre: '',
-    carnet: ''
+    carnet: '',
+    usuario: ''
   });
 
   useEffect(() => {
@@ -29,9 +30,21 @@ const Usuarios = () => {
     }
   };
 
+  // Función para generar usuario automáticamente
+  const generarUsuario = (nombre, carnet) => {
+    const palabras = nombre.split(' ').filter(p => p.length > 0);
+    const iniciales = palabras.slice(0, 3).map(p => p[0] || '').join('').toUpperCase();
+    const digitos = carnet.replace(/\D/g, '').slice(-3);
+    
+    return iniciales && digitos ? iniciales + digitos : '';
+  };
+
   const handleSubmit = async (e) => {
     e.preventDefault();
     try {
+      // Regenerar usuario con los nuevos datos
+      const usuarioActualizado = generarUsuario(formData.nombre, formData.carnet);
+      
       const response = await fetch('/.netlify/functions/usuarios', {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
@@ -39,7 +52,8 @@ const Usuarios = () => {
           id: editingUser._id,
           nombre: formData.nombre,
           carnet: formData.carnet,
-          usuario: editingUser.usuario // Mantener el mismo usuario
+          usuario: usuarioActualizado,
+          usuario_original: editingUser.usuario // Para buscar y actualizar en otras colecciones
         })
       });
 
@@ -48,7 +62,7 @@ const Usuarios = () => {
       if (result.success) {
         setShowModal(false);
         setEditingUser(null);
-        setFormData({ nombre: '', carnet: '' });
+        setFormData({ nombre: '', carnet: '', usuario: '' });
         cargarUsuarios(); // Recargar la lista
       }
     } catch (error) {
@@ -60,9 +74,33 @@ const Usuarios = () => {
     setEditingUser(usuario);
     setFormData({
       nombre: usuario.nombre_completo || '',
-      carnet: usuario.carnet_identidad || ''
+      carnet: usuario.carnet_identidad || '',
+      usuario: usuario.usuario || ''
     });
     setShowModal(true);
+  };
+
+  // Actualizar usuario automáticamente cuando cambie nombre o carnet
+  const handleInputChange = (field, value) => {
+    const newFormData = {
+      ...formData,
+      [field]: value
+    };
+    
+    setFormData(newFormData);
+    
+    // Regenerar usuario si cambia nombre o carnet
+    if (field === 'nombre' || field === 'carnet') {
+      const nuevoUsuario = generarUsuario(
+        field === 'nombre' ? value : newFormData.nombre,
+        field === 'carnet' ? value : newFormData.carnet
+      );
+      
+      setFormData(prev => ({
+        ...prev,
+        usuario: nuevoUsuario
+      }));
+    }
   };
 
   const handleDelete = async (usuario) => {
@@ -193,25 +231,15 @@ const Usuarios = () => {
             
             <form onSubmit={handleSubmit} className="modal-form">
               <div className="form-group">
-                <label>Usuario (No editable)</label>
-                <input
-                  type="text"
-                  value={editingUser?.usuario || ''}
-                  readOnly
-                  className="readonly-input"
-                />
-                <small>El usuario no se puede modificar</small>
-              </div>
-              
-              <div className="form-group">
-                <label>Nombre Completo</label>
+                <label>Nombre Completo (3 palabras mínimo)</label>
                 <input
                   type="text"
                   value={formData.nombre}
-                  onChange={(e) => setFormData(prev => ({ ...prev, nombre: e.target.value }))}
+                  onChange={(e) => handleInputChange('nombre', e.target.value)}
                   required
                   placeholder="Ej: Juan Carlos Perez Lopez"
                 />
+                <small>El usuario se regenerará automáticamente</small>
               </div>
               
               <div className="form-group">
@@ -219,10 +247,22 @@ const Usuarios = () => {
                 <input
                   type="text"
                   value={formData.carnet}
-                  onChange={(e) => setFormData(prev => ({ ...prev, carnet: e.target.value }))}
+                  onChange={(e) => handleInputChange('carnet', e.target.value)}
                   required
                   placeholder="Ej: 1234567LP"
                 />
+                <small>Los últimos 3 dígitos se usarán para el usuario</small>
+              </div>
+              
+              <div className="form-group">
+                <label>Nuevo Usuario (Generado automáticamente)</label>
+                <input
+                  type="text"
+                  value={formData.usuario}
+                  readOnly
+                  className="readonly-input generated-user"
+                />
+                <small>Se genera con iniciales del nombre + últimos 3 dígitos del carnet</small>
               </div>
 
               <div className="form-group">
