@@ -64,9 +64,12 @@ const Usuarios = () => {
         setEditingUser(null);
         setFormData({ nombre: '', carnet: '', usuario: '' });
         cargarUsuarios(); // Recargar la lista
+      } else {
+        alert('Error: ' + (result.error || 'No se pudo actualizar el usuario'));
       }
     } catch (error) {
       console.error('Error actualizando usuario:', error);
+      alert('Error de conexión: ' + error.message);
     }
   };
 
@@ -118,9 +121,12 @@ const Usuarios = () => {
         const result = await response.json();
         if (result.success) {
           cargarUsuarios();
+        } else {
+          alert('Error: ' + (result.error || 'No se pudo eliminar el usuario'));
         }
       } catch (error) {
         console.error('Error eliminando usuario:', error);
+        alert('Error de conexión: ' + error.message);
       }
     }
   };
@@ -216,11 +222,11 @@ const Usuarios = () => {
       </div>
 
       {/* Modal para editar usuario */}
-      {showModal && (
+      {showModal && editingUser && (
         <div className="modal-overlay">
           <div className="modal">
             <div className="modal-header">
-              <h2>Editar Usuario: {editingUser?.usuario}</h2>
+              <h2>Editar Usuario: {editingUser.usuario}</h2>
               <button 
                 className="close-btn"
                 onClick={() => setShowModal(false)}
@@ -269,7 +275,7 @@ const Usuarios = () => {
                 <label>RFID (No editable)</label>
                 <input
                   type="text"
-                  value={editingUser?.rfid_code || 'No asignado'}
+                  value={editingUser.rfid_code || 'No asignado'}
                   readOnly
                   className="readonly-input"
                 />

@@ -717,3 +717,69 @@
   font-weight: 600;
   border: 1px solid #c8e6c9 !important;
 }
+
+/* Estilo especial para el usuario generado */
+.generated-user {
+  background: #e8f5e8 !important;
+  color: #2e7d32 !important;
+  font-weight: 600;
+  border: 1px solid #c8e6c9 !important;
+}
+
+/* Info badge */
+.header-info {
+  margin-top: 0.5rem;
+}
+
+.info-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  background: #e3f2fd;
+  color: #1565c0;
+  padding: 0.5rem 1rem;
+  border-radius: 6px;
+  font-size: 0.9rem;
+}
+
+.info-badge i {
+  font-size: 1rem;
+}
+
+/* Botones de acción mejorados */
+.action-buttons {
+  display: flex;
+  gap: 0.5rem;
+}
+
+.btn-edit, .btn-delete {
+  padding: 0.5rem 1rem;
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  font-size: 0.85rem;
+  display: flex;
+  align-items: center;
+  gap: 0.25rem;
+}
+
+.btn-edit {
+  background: #fff3cd;
+  color: #856404;
+  border: 1px solid #ffeaa7;
+}
+
+.btn-edit:hover {
+  background: #ffeaa7;
+}
+
+.btn-delete {
+  background: #f8d7da;
+  color: #721c24;
+  border: 1px solid #f1b0b7;
+}
+
+.btn-delete:hover {
+  background: #f1b0b7;
+}
