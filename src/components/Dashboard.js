@@ -4,10 +4,12 @@ const Dashboard = () => {
   const [estadisticas, setEstadisticas] = useState(null);
   const [eventosRecientes, setEventosRecientes] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [releEstado, setReleEstado] = useState('desconocido');
+  const [controlandoRele, setControlandoRele] = useState(false);
 
   useEffect(() => {
     cargarDashboard();
-    const interval = setInterval(cargarDashboard, 5000); // Actualizar cada 5s
+    const interval = setInterval(cargarDashboard, 5000);
     return () => clearInterval(interval);
   }, []);
 
@@ -30,6 +32,48 @@ const Dashboard = () => {
     }
   };
 
+  // Función para controlar el relé
+  const controlarRele = async (accion) => {
+    setControlandoRele(true);
+    try {
+      let comando = '';
+      
+      switch(accion) {
+        case 'activar':
+          comando = 'ACCESS_GRANTED';
+          break;
+        case 'desactivar':
+          comando = 'ACCESS_DENIED';
+          break;
+        case 'test':
+          comando = 'RELE_TEST';
+          break;
+        default:
+          throw new Error('Acción no válida');
+      }
+
+      const response = await fetch('/.netlify/functions/control-rele', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ comando: comando })
+      });
+
+      const result = await response.json();
+      
+      if (result.success) {
+        setReleEstado(accion === 'activar' ? 'activado' : 'desactivado');
+        alert(`✅ Relé ${accion} correctamente`);
+      } else {
+        throw new Error(result.error || 'Error desconocido');
+      }
+    } catch (error) {
+      console.error('Error controlando relé:', error);
+      alert(`❌ Error: ${error.message}`);
+    } finally {
+      setControlandoRele(false);
+    }
+  };
+
   if (loading) {
     return (
       <div className="loading">
@@ -41,6 +85,73 @@ const Dashboard = () => {
 
   return (
     <div className="dashboard">
+      {/* Sección de Control de Relé */}
+      <div className="control-section">
+        <div className="control-card">
+          <div className="control-header">
+            <h2>
+              <i className="fas fa-cogs"></i>
+              Control de Acceso Remoto
+            </h2>
+            <div className={`rele-status ${releEstado}`}>
+              <i className={`fas ${releEstado === 'activado' ? 'fa-unlock' : releEstado === 'desactivado' ? 'fa-lock' : 'fa-question'}`}></i>
+              Estado: {releEstado.charAt(0).toUpperCase() + releEstado.slice(1)}
+            </div>
+          </div>
+          
+          <div className="control-buttons">
+            <button 
+              className="btn-control success"
+              onClick={() => controlarRele('activar')}
+              disabled={controlandoRele}
+            >
+              {controlandoRele ? (
+                <div className="spinner-small"></div>
+              ) : (
+                <i className="fas fa-unlock"></i>
+              )}
+              Activar Relé
+              <small>Abrir puerta/activar acceso</small>
+            </button>
+            
+            <button 
+              className="btn-control danger"
+              onClick={() => controlarRele('desactivar')}
+              disabled={controlandoRele}
+            >
+              {controlandoRele ? (
+                <div className="spinner-small"></div>
+              ) : (
+                <i className="fas fa-lock"></i>
+              )}
+              Desactivar Relé
+              <small>Cerrar puerta/desactivar acceso</small>
+            </button>
+            
+            <button 
+              className="btn-control warning"
+              onClick={() => controlarRele('test')}
+              disabled={controlandoRele}
+            >
+              {controlandoRele ? (
+                <div className="spinner-small"></div>
+              ) : (
+                <i className="fas fa-bolt"></i>
+              )}
+              Test Relé
+              <small>Probar funcionamiento</small>
+            </button>
+          </div>
+          
+          <div className="control-info">
+            <p>
+              <i className="fas fa-info-circle"></i>
+              El relé controla el mecanismo de apertura/cierre del sistema de seguridad.
+            </p>
+          </div>
+        </div>
+      </div>
+
       {/* Tarjetas de Estadísticas */}
       <div className="stats-grid">
         <StatCard 
@@ -92,7 +203,7 @@ const Dashboard = () => {
   );
 };
 
-// Componente para tarjetas de estadísticas
+// Componente para tarjetas de estadísticas (sin cambios)
 const StatCard = ({ title, value, icon, color }) => (
   <div className={`stat-card ${color}`}>
     <div className="stat-content">
@@ -107,7 +218,7 @@ const StatCard = ({ title, value, icon, color }) => (
   </div>
 );
 
-// Componente para eventos
+// Componente para eventos (sin cambios)
 const EventCard = ({ evento }) => {
   const fecha = new Date(evento.fecha_hora);
   const acceso = evento.acceso_concedido;
