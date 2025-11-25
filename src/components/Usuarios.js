@@ -107,7 +107,16 @@ const Usuarios = () => {
   };
 
   const handleDelete = async (usuario) => {
-    if (window.confirm(`¿Estás seguro de eliminar al usuario ${usuario.usuario}? Se borrarán TODOS sus datos incluyendo rostro, RFID y eventos.`)) {
+    if (window.confirm(
+      `¿Estás seguro de eliminar completamente al usuario ${usuario.usuario}?\n\n` +
+      `Se eliminará:\n` +
+      `• De la base de datos MongoDB\n` +
+      `• Su foto de rostro del sistema local\n` +
+      `• Su archivo de usuario (.txt)\n` +
+      `• Su encoding facial\n` +
+      `• Todos sus eventos de acceso\n\n` +
+      `Esta acción NO se puede deshacer.`
+    )) {
       try {
         const response = await fetch('/.netlify/functions/usuarios', {
           method: 'DELETE',
@@ -119,14 +128,18 @@ const Usuarios = () => {
         });
 
         const result = await response.json();
+        
         if (result.success) {
+          alert(`✅ Usuario ${usuario.usuario} eliminado completamente\n\n` +
+                `Operaciones realizadas:\n` +
+                result.eliminaciones.map(e => `• ${e}`).join('\n'));
           cargarUsuarios();
         } else {
-          alert('Error: ' + (result.error || 'No se pudo eliminar el usuario'));
+          alert('❌ Error: ' + (result.error || 'No se pudo eliminar el usuario'));
         }
       } catch (error) {
         console.error('Error eliminando usuario:', error);
-        alert('Error de conexión: ' + error.message);
+        alert('❌ Error de conexión: ' + error.message);
       }
     }
   };
