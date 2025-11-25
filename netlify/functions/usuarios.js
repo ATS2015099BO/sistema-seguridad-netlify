@@ -213,7 +213,7 @@ exports.handler = async (event, context) => {
       
       let eliminaciones = [];
       
-      // Buscar y eliminar de todas las colecciones posibles
+      // 1. Eliminar de MongoDB primero
       const posiblesColeccionesUsuarios = ['usuarios', 'users', 'Usuarios'];
       
       for (const coleccionNombre of posiblesColeccionesUsuarios) {
@@ -228,7 +228,7 @@ exports.handler = async (event, context) => {
         }
       }
       
-      // Eliminar eventos relacionados
+      // 2. Eliminar eventos relacionados
       try {
         const eventosCollection = db.collection('eventos_acceso');
         const resultadoEventos = await eventosCollection.deleteMany({ usuario: data.usuario });
@@ -237,7 +237,7 @@ exports.handler = async (event, context) => {
         console.log('Error eliminando eventos:', e.message);
       }
 
-      // Eliminar encoding facial si existe
+      // 3. Eliminar encoding facial si existe
       try {
         const encodingsCollection = db.collection('encodings_faciales');
         const resultadoEncodings = await encodingsCollection.deleteOne({ usuario: data.usuario });
@@ -246,31 +246,30 @@ exports.handler = async (event, context) => {
         console.log('Error eliminando encoding facial:', e.message);
       }
 
-      // ✅ NUEVO: Intentar eliminar archivos locales del sistema Python
+      // 4. ✅ NUEVO: Eliminar archivos locales via MQTT
       try {
-        const pythonResponse = await fetch('http://localhost:5000/eliminar-archivos-usuario', {
+        const eliminarResponse = await fetch(`${process.env.URL || ''}/.netlify/functions/eliminar-archivos-usuario`, {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
           },
           body: JSON.stringify({ 
             username: data.usuario 
-          }),
-          timeout: 3000 // 3 segundos timeout
+          })
         });
 
-        if (pythonResponse.ok) {
-          const pythonResult = await pythonResponse.json();
-          eliminaciones.push(`Archivos locales eliminados: ${pythonResult.message}`);
+        const eliminarResult = await eliminarResponse.json();
+        
+        if (eliminarResult.success) {
+          eliminaciones.push(`Archivos locales: ${eliminarResult.resultado?.archivosEliminados?.join(', ') || 'eliminados'}`);
           console.log(`✅ Archivos locales eliminados para: ${data.usuario}`);
         } else {
-          console.log(`⚠️ Sistema Python no disponible para: ${data.usuario}`);
-          eliminaciones.push('Sistema Python offline - archivos locales no eliminados');
+          eliminaciones.push(`Archivos locales: Error - ${eliminarResult.error}`);
+          console.log(`❌ Error eliminando archivos locales: ${eliminarResult.error}`);
         }
       } catch (pythonError) {
-        console.log(`🔶 Sistema Python offline, pero usuario ${data.usuario} eliminado de MongoDB`);
-        eliminaciones.push('Sistema Python no disponible - archivos locales pendientes');
-        // No fallar la operación si el sistema Python está offline
+        eliminaciones.push('Archivos locales: Sistema offline - no eliminados');
+        console.log(`🔶 Sistema Python offline para: ${data.usuario}`);
       }
 
       console.log('✅ ELIMINACIONES COMPLETADAS:', eliminaciones);
