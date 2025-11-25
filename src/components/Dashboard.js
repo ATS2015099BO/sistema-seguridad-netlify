@@ -36,38 +36,33 @@ const Dashboard = () => {
   const controlarRele = async (accion) => {
     setControlandoRele(true);
     try {
-      let comando = '';
-      
-      switch(accion) {
-        case 'activar':
-          comando = 'ACCESS_GRANTED';
-          break;
-        case 'desactivar':
-          comando = 'ACCESS_DENIED';
-          break;
-        case 'test':
-          comando = 'RELE_TEST';
-          break;
-        default:
-          throw new Error('Acción no válida');
-      }
-
       const response = await fetch('/.netlify/functions/control-rele', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ comando: comando })
+        body: JSON.stringify({ 
+          comando: 'ACCESS_GRANTED',
+          nombre: nombreAcceso,
+          carnet: carnetAcceso
+        })
       });
 
       const result = await response.json();
       
       if (result.success) {
-        setReleEstado(accion === 'activar' ? 'activado' : 'desactivado');
-        alert(`✅ Relé ${accion} correctamente`);
+        setReleEstado('activado');
+        setNombreAcceso('');
+        setCarnetAcceso('');
+        alert(`✅ Acceso concedido para ${result.nombre}`);
+        
+        // Desactivar después de 3 segundos
+        setTimeout(() => {
+          setReleEstado('desactivado');
+        }, 3000);
       } else {
         throw new Error(result.error || 'Error desconocido');
       }
     } catch (error) {
-      console.error('Error controlando relé:', error);
+      console.error('Error controlando acceso:', error);
       alert(`❌ Error: ${error.message}`);
     } finally {
       setControlandoRele(false);
@@ -90,63 +85,56 @@ const Dashboard = () => {
         <div className="control-card">
           <div className="control-header">
             <h2>
-              <i className="fas fa-cogs"></i>
+              <i className="fas fa-door-open"></i>
               Control de Acceso Remoto
             </h2>
             <div className={`rele-status ${releEstado}`}>
-              <i className={`fas ${releEstado === 'activado' ? 'fa-unlock' : releEstado === 'desactivado' ? 'fa-lock' : 'fa-question'}`}></i>
+              <i className={`fas ${releEstado === 'activado' ? 'fa-unlock' : 'fa-lock'}`}></i>
               Estado: {releEstado.charAt(0).toUpperCase() + releEstado.slice(1)}
             </div>
           </div>
           
-          <div className="control-buttons">
+          <div className="access-control">
+            <div className="access-form">
+              <div className="form-group">
+                <label>Nombre Completo</label>
+                <input
+                  type="text"
+                  placeholder="Ingrese su nombre"
+                  value={nombreAcceso}
+                  onChange={(e) => setNombreAcceso(e.target.value)}
+                />
+              </div>
+              <div className="form-group">
+                <label>Carnet de Identidad</label>
+                <input
+                  type="text"
+                  placeholder="Ingrese su carnet"
+                  value={carnetAcceso}
+                  onChange={(e) => setCarnetAcceso(e.target.value)}
+                />
+              </div>
+            </div>
+            
             <button 
               className="btn-control success"
               onClick={() => controlarRele('activar')}
-              disabled={controlandoRele}
+              disabled={controlandoRele || !nombreAcceso || !carnetAcceso}
             >
               {controlandoRele ? (
                 <div className="spinner-small"></div>
               ) : (
-                <i className="fas fa-unlock"></i>
+                <i className="fas fa-key"></i>
               )}
-              Activar Relé
+              Conceder Acceso Remoto
               <small>Abrir puerta/activar acceso</small>
-            </button>
-            
-            <button 
-              className="btn-control danger"
-              onClick={() => controlarRele('desactivar')}
-              disabled={controlandoRele}
-            >
-              {controlandoRele ? (
-                <div className="spinner-small"></div>
-              ) : (
-                <i className="fas fa-lock"></i>
-              )}
-              Desactivar Relé
-              <small>Cerrar puerta/desactivar acceso</small>
-            </button>
-            
-            <button 
-              className="btn-control warning"
-              onClick={() => controlarRele('test')}
-              disabled={controlandoRele}
-            >
-              {controlandoRele ? (
-                <div className="spinner-small"></div>
-              ) : (
-                <i className="fas fa-bolt"></i>
-              )}
-              Test Relé
-              <small>Probar funcionamiento</small>
             </button>
           </div>
           
           <div className="control-info">
             <p>
               <i className="fas fa-info-circle"></i>
-              El relé controla el mecanismo de apertura/cierre del sistema de seguridad.
+              El acceso remoto registra el evento con los datos ingresados.
             </p>
           </div>
         </div>

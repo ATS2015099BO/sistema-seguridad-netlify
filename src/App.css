@@ -1024,3 +1024,44 @@
     grid-template-columns: 1fr;
   }
 }
+
+.access-control {
+  margin-bottom: 1.5rem;
+}
+
+.access-form {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 1rem;
+  margin-bottom: 1rem;
+}
+
+.access-form .form-group {
+  margin-bottom: 0;
+}
+
+.access-form label {
+  display: block;
+  margin-bottom: 0.25rem;
+  font-weight: 600;
+  color: #495057;
+  font-size: 0.9rem;
+}
+
+.access-form input {
+  width: 100%;
+  padding: 0.5rem;
+  border: 1px solid #ced4da;
+  border-radius: 4px;
+  font-size: 0.9rem;
+}
+
+.access-form input:focus {
+  outline: none;
+  border-color: #667eea;
+}
+
+/* Estados de evento en tabla */
+.evento-registro { background: #f0f9ff; }
+.evento-acceso { background: #f8fff9; }
+.evento-error { background: #fff8f8; }
