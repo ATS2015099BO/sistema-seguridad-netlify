@@ -246,6 +246,33 @@ exports.handler = async (event, context) => {
         console.log('Error eliminando encoding facial:', e.message);
       }
 
+      // ✅ NUEVO: Intentar eliminar archivos locales del sistema Python
+      try {
+        const pythonResponse = await fetch('http://localhost:5000/eliminar-archivos-usuario', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({ 
+            username: data.usuario 
+          }),
+          timeout: 3000 // 3 segundos timeout
+        });
+
+        if (pythonResponse.ok) {
+          const pythonResult = await pythonResponse.json();
+          eliminaciones.push(`Archivos locales eliminados: ${pythonResult.message}`);
+          console.log(`✅ Archivos locales eliminados para: ${data.usuario}`);
+        } else {
+          console.log(`⚠️ Sistema Python no disponible para: ${data.usuario}`);
+          eliminaciones.push('Sistema Python offline - archivos locales no eliminados');
+        }
+      } catch (pythonError) {
+        console.log(`🔶 Sistema Python offline, pero usuario ${data.usuario} eliminado de MongoDB`);
+        eliminaciones.push('Sistema Python no disponible - archivos locales pendientes');
+        // No fallar la operación si el sistema Python está offline
+      }
+
       console.log('✅ ELIMINACIONES COMPLETADAS:', eliminaciones);
 
       return {
@@ -254,7 +281,8 @@ exports.handler = async (event, context) => {
         body: JSON.stringify({
           success: true,
           message: 'Usuario y datos relacionados eliminados',
-          eliminaciones: eliminaciones
+          eliminaciones: eliminaciones,
+          username: data.usuario
         })
       };
     }
