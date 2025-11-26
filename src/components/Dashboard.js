@@ -6,6 +6,10 @@ const Dashboard = () => {
   const [loading, setLoading] = useState(true);
   const [releEstado, setReleEstado] = useState('desconocido');
   const [controlandoRele, setControlandoRele] = useState(false);
+  
+  // NUEVOS ESTADOS PARA ACCESO REMOTO
+  const [nombreAcceso, setNombreAcceso] = useState('');
+  const [carnetAcceso, setCarnetAcceso] = useState('');
 
   useEffect(() => {
     cargarDashboard();
@@ -32,11 +36,16 @@ const Dashboard = () => {
     }
   };
 
-  // Función para controlar el relé
-  const controlarRele = async (accion) => {
+  // Función para controlar el acceso remoto
+  const controlarAccesoRemoto = async () => {
+    if (!nombreAcceso.trim() || !carnetAcceso.trim()) {
+      alert('Por favor ingrese nombre y carnet');
+      return;
+    }
+
     setControlandoRele(true);
     try {
-      const response = await fetch('/.netlify/functions/control-rele', {
+      const response = await fetch('/.netlify/functions/acceso-remoto', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ 
@@ -50,19 +59,26 @@ const Dashboard = () => {
       
       if (result.success) {
         setReleEstado('activado');
+        
+        // Limpiar campos
         setNombreAcceso('');
         setCarnetAcceso('');
-        alert(`✅ Acceso concedido para ${result.nombre}`);
+        
+        // Mostrar confirmación
+        alert(`✅ Acceso remoto concedido para ${result.nombre}`);
         
         // Desactivar después de 3 segundos
         setTimeout(() => {
           setReleEstado('desactivado');
         }, 3000);
+        
+        // Recargar dashboard para mostrar el nuevo evento
+        cargarDashboard();
       } else {
         throw new Error(result.error || 'Error desconocido');
       }
     } catch (error) {
-      console.error('Error controlando acceso:', error);
+      console.error('Error controlando acceso remoto:', error);
       alert(`❌ Error: ${error.message}`);
     } finally {
       setControlandoRele(false);
@@ -80,7 +96,7 @@ const Dashboard = () => {
 
   return (
     <div className="dashboard">
-      {/* Sección de Control de Relé */}
+      {/* Sección de Control de Acceso Remoto */}
       <div className="control-section">
         <div className="control-card">
           <div className="control-header">
@@ -118,8 +134,8 @@ const Dashboard = () => {
             
             <button 
               className="btn-control success"
-              onClick={() => controlarRele('activar')}
-              disabled={controlandoRele || !nombreAcceso || !carnetAcceso}
+              onClick={controlarAccesoRemoto}
+              disabled={controlandoRele || !nombreAcceso.trim() || !carnetAcceso.trim()}
             >
               {controlandoRele ? (
                 <div className="spinner-small"></div>
@@ -191,7 +207,7 @@ const Dashboard = () => {
   );
 };
 
-// Componente para tarjetas de estadísticas (sin cambios)
+// Componente para tarjetas de estadísticas
 const StatCard = ({ title, value, icon, color }) => (
   <div className={`stat-card ${color}`}>
     <div className="stat-content">
@@ -206,19 +222,37 @@ const StatCard = ({ title, value, icon, color }) => (
   </div>
 );
 
-// Componente para eventos (sin cambios)
+// Componente para eventos - MEJORADO para mostrar diferentes tipos
 const EventCard = ({ evento }) => {
   const fecha = new Date(evento.fecha_hora);
-  const acceso = evento.acceso_concedido;
+  
+  // Determinar clase y icono basado en el tipo de evento
+  let claseEvento = '';
+  let icono = '';
+  let estado = '';
+  
+  if (evento.tipo_evento === 'registro') {
+    claseEvento = evento.exito ? 'success' : 'danger';
+    icono = evento.exito ? '📝' : '❌';
+    estado = evento.exito ? 'REGISTRO EXITOSO' : 'REGISTRO FALLIDO';
+  } else if (evento.tipo_evento === 'acceso') {
+    claseEvento = evento.exito ? 'success' : 'danger';
+    icono = evento.exito ? '✅' : '🚫';
+    estado = evento.exito ? 'ACCESO CONCEDIDO' : 'ACCESO DENEGADO';
+  } else {
+    claseEvento = 'warning';
+    icono = '⚠️';
+    estado = evento.tipo_evento || 'EVENTO';
+  }
   
   return (
-    <div className={`event-card ${acceso ? 'success' : 'danger'}`}>
+    <div className={`event-card ${claseEvento}`}>
       <div className="event-header">
         <div className="event-user">
           <strong>{evento.usuario || 'Usuario'}</strong>
         </div>
-        <div className={`event-status ${acceso ? 'success' : 'danger'}`}>
-          {acceso ? '✅ CONCEDIDO' : '❌ DENEGADO'}
+        <div className={`event-status ${claseEvento}`}>
+          {icono} {estado}
         </div>
       </div>
       
@@ -233,10 +267,17 @@ const EventCard = ({ evento }) => {
         </div>
       )}
       
-      {evento.rfid_code && (
+      {evento.rfid_code && evento.rfid_code !== 'ACCESO_REMOTO' && (
         <div className="event-rfid">
           <i className="fas fa-id-card"></i>
           RFID: {evento.rfid_code}
+        </div>
+      )}
+      
+      {evento.rfid_code === 'ACCESO_REMOTO' && (
+        <div className="event-remoto">
+          <i className="fas fa-desktop"></i>
+          Acceso Remoto
         </div>
       )}
     </div>
