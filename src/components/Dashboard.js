@@ -222,27 +222,51 @@ const StatCard = ({ title, value, icon, color }) => (
   </div>
 );
 
-// Componente para eventos - MEJORADO para mostrar diferentes tipos
+// Componente para eventos - VERSIÓN CORREGIDA CON ESTRUCTURA REAL
 const EventCard = ({ evento }) => {
   const fecha = new Date(evento.fecha_hora);
   
-  // Determinar clase y icono basado en el tipo de evento
+  // ✅ CORREGIDO: Usar la estructura real de los eventos
   let claseEvento = '';
   let icono = '';
   let estado = '';
   
-  if (evento.tipo_evento === 'registro') {
-    claseEvento = evento.exito ? 'success' : 'danger';
-    icono = evento.exito ? '📝' : '❌';
-    estado = evento.exito ? 'REGISTRO EXITOSO' : 'REGISTRO FALLIDO';
-  } else if (evento.tipo_evento === 'acceso') {
-    claseEvento = evento.exito ? 'success' : 'danger';
-    icono = evento.exito ? '✅' : '🚫';
-    estado = evento.exito ? 'ACCESO CONCEDIDO' : 'ACCESO DENEGADO';
-  } else {
+  // Determinar tipo basado en campos REALES
+  const motivo = evento.motivo?.toLowerCase() || '';
+  const exito = evento.exito; // Campo booleano real
+  const tipoEvento = evento.tipo_evento; // Campo de acceso remoto
+  
+  // Lógica de clasificación MEJORADA
+  if (tipoEvento === 'acceso' && exito === true) {
+    // Eventos de acceso remoto exitosos
+    claseEvento = 'success';
+    icono = '✅';
+    estado = 'ACCESO CONCEDIDO';
+  }
+  else if (exito === true && (motivo.includes('concedido') || motivo.includes('registrado exitosamente'))) {
+    // Accesos exitosos del sistema físico
+    claseEvento = 'success';
+    icono = '✅';
+    estado = 'ACCESO CONCEDIDO';
+  }
+  else if (exito === false || motivo.includes('denegado') || motivo.includes('no registrada') || 
+           motivo.includes('no coincide') || motivo.includes('tiempo agotado') || motivo.includes('ya registrado')) {
+    // Todos los tipos de acceso denegado
+    claseEvento = 'danger';
+    icono = '❌';
+    estado = 'ACCESO DENEGADO';
+  }
+  else if (motivo.includes('registrado exitosamente')) {
+    // Registros exitosos
+    claseEvento = 'info';
+    icono = '📝';
+    estado = 'REGISTRO EXITOSO';
+  }
+  else {
+    // Por defecto
     claseEvento = 'warning';
     icono = '⚠️';
-    estado = evento.tipo_evento || 'EVENTO';
+    estado = 'EVENTO';
   }
   
   return (
@@ -267,14 +291,14 @@ const EventCard = ({ evento }) => {
         </div>
       )}
       
-      {evento.rfid_code && evento.rfid_code !== 'ACCESO_REMOTO' && (
+      {evento.rfid_code && evento.rfid_code !== 'ACCESO_REMOTO' && evento.rfid_code !== 'N/A' && evento.rfid_code !== 'Pendiente' && (
         <div className="event-rfid">
           <i className="fas fa-id-card"></i>
           RFID: {evento.rfid_code}
         </div>
       )}
       
-      {evento.rfid_code === 'ACCESO_REMOTO' && (
+      {(evento.rfid_code === 'ACCESO_REMOTO' || evento.dispositivo === 'Web Dashboard') && (
         <div className="event-remoto">
           <i className="fas fa-desktop"></i>
           Acceso Remoto
