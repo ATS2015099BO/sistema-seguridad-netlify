@@ -222,28 +222,32 @@ const StatCard = ({ title, value, icon, color }) => (
   </div>
 );
 
-// Componente para eventos - VERSIÓN CORREGIDA CON ESTRUCTURA REAL
+// Componente para eventos - VERSIÓN FINAL CORREGIDA
 const EventCard = ({ evento }) => {
   const fecha = new Date(evento.fecha_hora);
   
-  // ✅ CORREGIDO: Usar la estructura real de los eventos
   let claseEvento = '';
   let icono = '';
   let estado = '';
   
-  // Determinar tipo basado en campos REALES
   const motivo = evento.motivo?.toLowerCase() || '';
-  const exito = evento.exito; // Campo booleano real
-  const tipoEvento = evento.tipo_evento; // Campo de acceso remoto
+  const exito = evento.exito;
+  const tipoEvento = evento.tipo_evento;
   
-  // Lógica de clasificación MEJORADA
-  if (tipoEvento === 'acceso' && exito === true) {
+  // ✅ LÓGICA MEJORADA - REGISTROS SEPARADOS DE ACCESOS
+  if (motivo.includes('registrado exitosamente')) {
+    // Registros exitosos - MOSTRAR COMO REGISTRO
+    claseEvento = 'info';
+    icono = '📝';
+    estado = 'REGISTRO EXITOSO';
+  }
+  else if (tipoEvento === 'acceso' && exito === true) {
     // Eventos de acceso remoto exitosos
     claseEvento = 'success';
     icono = '✅';
     estado = 'ACCESO CONCEDIDO';
   }
-  else if (exito === true && (motivo.includes('concedido') || motivo.includes('registrado exitosamente'))) {
+  else if (exito === true && motivo.includes('concedido')) {
     // Accesos exitosos del sistema físico
     claseEvento = 'success';
     icono = '✅';
@@ -255,12 +259,6 @@ const EventCard = ({ evento }) => {
     claseEvento = 'danger';
     icono = '❌';
     estado = 'ACCESO DENEGADO';
-  }
-  else if (motivo.includes('registrado exitosamente')) {
-    // Registros exitosos
-    claseEvento = 'info';
-    icono = '📝';
-    estado = 'REGISTRO EXITOSO';
   }
   else {
     // Por defecto
