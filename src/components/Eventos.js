@@ -29,11 +29,12 @@ const Eventos = () => {
     const coincideBusqueda = evento.usuario?.toLowerCase().includes(busqueda.toLowerCase()) ||
                            evento.rfid_code?.toLowerCase().includes(busqueda.toLowerCase());
     
+    // ✅ CORREGIDO: Usar evento.exito en lugar de evento.acceso_concedido
     const coincideFiltro = filtro === 'todos' || 
-                        (filtro === 'exitosos' && evento.exito) ||
-                        (filtro === 'fallidos' && !evento.exito);
-  
-  return coincideBusqueda && coincideFiltro;
+                          (filtro === 'exitosos' && evento.exito) ||
+                          (filtro === 'fallidos' && !evento.exito);
+    
+    return coincideBusqueda && coincideFiltro;
   });
 
   if (loading) {
@@ -82,13 +83,15 @@ const Eventos = () => {
             className={filtro === 'exitosos' ? 'active' : ''}
             onClick={() => setFiltro('exitosos')}
           >
-            Exitosos ({eventos.filter(e => e.acceso_concedido).length})
+            {/* ✅ CORREGIDO: Usar evento.exito */}
+            Exitosos ({eventos.filter(e => e.exito).length})
           </button>
           <button 
             className={filtro === 'fallidos' ? 'active' : ''}
             onClick={() => setFiltro('fallidos')}
           >
-            Fallidos ({eventos.filter(e => !e.acceso_concedido).length})
+            {/* ✅ CORREGIDO: Usar evento.exito */}
+            Fallidos ({eventos.filter(e => !e.exito).length})
           </button>
         </div>
       </div>
@@ -107,7 +110,8 @@ const Eventos = () => {
           </thead>
           <tbody>
             {eventosFiltrados.map(evento => (
-              <tr key={evento._id} className={evento.acceso_concedido ? 'row-success' : 'row-danger'}>
+              // ✅ CORREGIDO: Usar evento.exito
+              <tr key={evento._id} className={evento.exito ? 'row-success' : 'row-danger'}>
                 <td>
                   <div className="datetime-cell">
                     <div className="date">{new Date(evento.fecha_hora).toLocaleDateString()}</div>
@@ -121,8 +125,9 @@ const Eventos = () => {
                   <code className="rfid-code">{evento.rfid_code || 'N/A'}</code>
                 </td>
                 <td>
-                  <span className={`status-badge ${evento.acceso_concedido ? 'success' : 'danger'}`}>
-                    {evento.acceso_concedido ? (
+                  {/* ✅ CORREGIDO: Usar evento.exito */}
+                  <span className={`status-badge ${evento.exito ? 'success' : 'danger'}`}>
+                    {evento.exito ? (
                       <>✅ Concedido</>
                     ) : (
                       <>❌ Denegado</>
