@@ -30,10 +30,10 @@ const Eventos = () => {
                            evento.rfid_code?.toLowerCase().includes(busqueda.toLowerCase());
     
     const coincideFiltro = filtro === 'todos' || 
-                          (filtro === 'exitosos' && evento.acceso_concedido) ||
-                          (filtro === 'fallidos' && !evento.acceso_concedido);
-    
-    return coincideBusqueda && coincideFiltro;
+                        (filtro === 'exitosos' && evento.exito) ||
+                        (filtro === 'fallidos' && !evento.exito);
+  
+  return coincideBusqueda && coincideFiltro;
   });
 
   if (loading) {
